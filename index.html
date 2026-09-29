@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cancionero · Sistema Hangar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Nanum+Pen+Script&family=Overpass+Mono:wght@400;600&display=swap">
+<style>
+/* ===== Sistema Hangar: tintas y voces ===== */
+:root{
+  --papel:#ECEBE3; --blanco:#FFFFFF;
+  --grafito:#2A2C2E; --grafito-2:#56595A; --filete:#7F8082;
+  --adriatico:#2E5B7A; --oliva:#6E6D3C; --ocre:#B0884A; --senal:#B5463A; --cielo:#9DB8C6;
+  --f-display:"Libre Caslon Display","Bodoni 72",Didot,Georgia,serif;
+  --f-texto:Literata,"Iowan Old Style",Georgia,serif;
+  --f-mano:"Nanum Pen Script","Nanum Pen","Segoe Print","Bradley Hand",cursive;
+  --f-ficha:"Overpass Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --zoom:1;
+}
+@page{size:A4 landscape;margin:0}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--papel);color:var(--grafito);font-family:var(--f-texto);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+button{font:inherit}
+
+/* ===== barra de pantalla (no se imprime) ===== */
+.barra{position:sticky;top:0;z-index:10;background:rgba(236,235,227,.95);border-bottom:1px solid rgba(42,44,46,.26);padding:12px 16px}
+.barra-in{max-width:1123px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.barra-t{margin:0;font-family:var(--f-display);font-size:26px;line-height:1;flex-grow:1}
+.barra-t span{font-family:var(--f-ficha);font-size:12px;letter-spacing:.08em;color:var(--grafito-2);white-space:nowrap}
+.interruptor{display:flex;align-items:center;gap:8px;font-family:var(--f-ficha);font-size:12px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;min-height:44px}
+.interruptor input{width:18px;height:18px;accent-color:var(--adriatico)}
+.boton{font-family:var(--f-ficha);font-size:12px;letter-spacing:.08em;text-transform:uppercase;background:transparent;color:var(--grafito);border:1.5px solid var(--grafito);padding:10px 16px;min-height:44px;cursor:pointer}
+.boton:hover{background:var(--grafito);color:var(--papel)}
+.ayuda{max-width:1123px;margin:8px auto 0;font-size:14px;line-height:1.45;color:var(--grafito-2)}
+:focus-visible{outline:2px dashed var(--senal);outline-offset:3px}
+
+/* ===== pliegos ===== */
+.pliegos{display:flex;flex-direction:column;align-items:center;gap:30px;padding:26px 16px 72px}
+.pliego{display:flex;flex-direction:column;gap:8px}
+.rotulo-hoja{margin:0;font-family:var(--f-ficha);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--grafito-2)}
+.hoja{position:relative;width:1123px;height:794px;display:flex;background:var(--blanco);overflow:hidden;box-shadow:0 1px 0 rgba(0,0,0,.08),0 18px 40px -24px rgba(0,0,0,.45);zoom:var(--zoom)}
+.pagina{position:relative;width:561.5px;height:794px;flex-shrink:0;overflow:hidden}
+
+/* lavados de acuarela */
+.lavados{position:absolute;inset:0;pointer-events:none}
+body.sin-acuarelas .lavados{display:none}
+.lavado{position:absolute;mix-blend-mode:multiply;filter:url(#acuarela)}
+.f1{border-radius:48% 52% 45% 55%/55% 45% 55% 45%}
+.f2{border-radius:52% 48% 55% 45%/45% 55% 45% 55%}
+.f3{border-radius:46% 54% 50% 50%}
+.cielo{background:radial-gradient(closest-side,#9DB8C6,rgba(157,184,198,0) 80%)}
+.ocre{background:radial-gradient(closest-side,#B0884A,rgba(176,136,74,0) 80%)}
+.oliva{background:radial-gradient(closest-side,#6E6D3C,rgba(110,109,60,0) 80%)}
+
+/* dibujo y notas del margen exterior */
+.margen{position:absolute;top:180px;width:80px;height:540px;overflow:visible}
+.recto .margen{left:442px}
+.verso .margen{left:40px}
+.nota{position:absolute;width:86px;margin:0;font-family:var(--f-mano);font-size:22px;line-height:1;color:var(--senal);white-space:pre-line;transform:rotate(-3deg)}
+.recto .nota{left:440px}
+.verso .nota{left:40px}
+
+/* caja de texto */
+.caja{position:absolute;top:44px;width:380px;height:708px;display:flex;flex-direction:column}
+.recto .caja{left:52px}
+.verso .caja{left:129.5px}
+.ceja{display:flex;justify-content:space-between;font-family:var(--f-ficha);font-size:12px;letter-spacing:.12em;color:var(--grafito-2)}
+.titulo{margin:14px 0 0;font-family:var(--f-display);font-weight:400;font-size:44px;line-height:1;color:var(--grafito);text-wrap:balance}
+.regla{width:56px;height:1.5px;margin-top:18px;background:var(--grafito)}
+.letras{flex-grow:1;min-height:0;margin-top:22px;display:flex;flex-direction:column;gap:14px;font-size:var(--tam,19px);line-height:1.45;color:var(--grafito)}
+.letra{white-space:pre-line;min-height:1.45em;outline:none;cursor:text}
+.letras > .letra:last-child{flex-grow:1}
+.estribillo{font-style:italic}
+.pie{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-family:var(--f-ficha);font-size:12px;letter-spacing:.06em;color:var(--grafito-2)}
+[data-vacio]:empty::before{content:attr(data-vacio);color:var(--grafito-2)}
+
+/* controles de tamaño (solo pantalla) */
+.tam{display:flex;gap:4px}
+.tam button{font-family:var(--f-ficha);font-size:11px;letter-spacing:.04em;background:var(--blanco);color:var(--grafito-2);border:1px solid var(--filete);padding:3px 7px;cursor:pointer;line-height:1.2}
+.tam button:hover{color:var(--grafito);border-color:var(--grafito)}
+
+/* línea de corte */
+.corte{position:absolute;left:551.5px;top:0;width:20px;height:794px}
+
+@media screen{
+  .letra{background:rgba(157,184,198,.10)}
+  .letra:focus{outline:1.5px dashed rgba(181,70,58,.55);outline-offset:4px}
+  .editable{outline:none;cursor:text}
+}
+@media print{
+  body{background:#FFFFFF}
+  .barra,.rotulo-hoja,.tam{display:none!important}
+  .pliegos{display:block;padding:0}
+  .pliego{display:block;break-after:page;page-break-after:always}
+  .pliego:last-child{break-after:auto;page-break-after:auto}
+  .hoja{zoom:1!important;box-shadow:none;width:297mm;height:210mm}
+  [data-vacio]:empty::before{content:none}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<filter id="acuarela" x="-20%" y="-20%" width="140%" height="140%">
+<feTurbulence type="fractalNoise" baseFrequency=".018" numOctaves="3" seed="7" result="ruido"></feTurbulence>
+<feDisplacementMap in="SourceGraphic" in2="ruido" scale="26" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+</filter>
+<filter id="lapiz" x="-5%" y="-5%" width="110%" height="110%">
+<feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="1" seed="3" result="r"></feTurbulence>
+<feDisplacementMap in="SourceGraphic" in2="r" scale="1.6"></feDisplacementMap>
+</filter>
+</svg>
+
+<header class="barra">
+<div class="barra-in">
+<p class="barra-t">Cancionero <span>· 4 caras A4 para imprimir doble faz</span></p>
+<label class="interruptor"><input type="checkbox" id="acuarelas" checked> Acuarelas</label>
+<button type="button" class="boton" id="imprimir">Imprimir</button>
+</div>
+<p class="ayuda">Pegá cada letra en su cuadro; queda guardada en este navegador. Con A− y A+ ajustás el tamaño para que entre. Al imprimir: doble faz volteando por el borde corto, márgenes «Ninguno» y escala 100 %.</p>
+</header>
+
+<main class="pliegos">
+
+<!-- ================= HOJA 1 · FRENTE ================= -->
+<section class="pliego">
+<p class="rotulo-hoja">Hoja 1 · frente — tapa y canción 02</p>
+<article class="hoja" aria-label="Hoja 1, frente">
+
+<!-- TAPA (pág. 1) -->
+<div class="pagina recto">
+<div class="lavados">
+<div class="lavado cielo f1" style="left:-30px;top:16px;width:380px;height:200px;opacity:.42"></div>
+<div class="lavado cielo f2" style="left:40px;top:300px;width:470px;height:270px;opacity:.5"></div>
+<div class="lavado ocre f3" style="left:30px;top:470px;width:280px;height:160px;opacity:.45"></div>
+</div>
+
+<svg style="position:absolute;left:40px;top:280px;width:482px;height:340px;overflow:visible" viewBox="40 280 482 340" aria-hidden="true">
+<g transform="translate(282 455) rotate(-24)">
+<g filter="url(#lapiz)" fill="none" stroke="#2A2C2E" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+<g transform="scale(-1 1) translate(-221.5 0)">
+<path d="M84 -12 L10 -19 Q2 -19 2 -12 Q6 -6 2 0 Q6 6 2 12 Q2 19 10 19 L84 12 Z"></path>
+<rect x="18" y="-10" width="48" height="6" rx="3"></rect>
+<rect x="18" y="4" width="48" height="6" rx="3"></rect>
+<path d="M22 -18 V-22 M38 -17 V-21 M54 -15 V-20 M22 18 V22 M38 17 V21 M54 15 V20" stroke-width="1"></path>
+<ellipse cx="22" cy="-25.5" rx="4.5" ry="3"></ellipse>
+<ellipse cx="38" cy="-24.5" rx="4.5" ry="3"></ellipse>
+<ellipse cx="54" cy="-23.5" rx="4.5" ry="3"></ellipse>
+<ellipse cx="22" cy="25.5" rx="4.5" ry="3"></ellipse>
+<ellipse cx="38" cy="24.5" rx="4.5" ry="3"></ellipse>
+<ellipse cx="54" cy="23.5" rx="4.5" ry="3"></ellipse>
+<path d="M84 -12 V12" stroke-width="2.2"></path>
+<path d="M84 -11.5 L279 -14.5 L279 14.5 L84 11.5 Z"></path>
+<path d="M100.2 -11.7V11.7 M115.5 -11.9V11.9 M130 -12.1V12.1 M143.6 -12.3V12.3 M156.5 -12.5V12.5 M168.6 -12.7V12.7 M180.1 -12.8V12.8 M190.9 -13V13 M201.2 -13.1V13.1 M210.8 -13.2V13.2 M219.9 -13.3V13.3 M228.5 -13.5V13.5 M236.6 -13.6V13.6 M244.3 -13.7V13.7 M251.5 -13.8V13.8 M258.3 -13.9V13.9 M264.7 -14V14 M270.8 -14V14 M276.6 -14V14" stroke="#56595A" stroke-width="1"></path>
+<path d="M228 -14 C229 -45 255 -62 283 -62 C300 -62 310 -52 323 -52 C340 -52 355 -81 378 -81 C415 -81 443 -50 443 0 C443 50 415 81 378 81 C355 81 340 52 323 52 C310 52 300 62 283 62 C255 62 229 45 228 14"></path>
+<circle cx="300" cy="0" r="19"></circle>
+<circle cx="300" cy="0" r="23" stroke="#56595A" stroke-width="1"></circle>
+<circle cx="300" cy="0" r="26" stroke="#56595A" stroke-width="1"></circle>
+<rect x="366" y="-42" width="20" height="84" rx="4"></rect>
+<path d="M372 -16 V16" stroke-width="2.2"></path>
+<path d="M84 -9L373 -13 M84 -5.4L373 -7.8 M84 -1.8L373 -2.6 M84 1.8L373 2.6 M84 5.4L373 7.8 M84 9L373 13" stroke="#56595A" stroke-width="1"></path>
+</g>
+</g>
+<g fill="none" stroke="#56595A" stroke-width="1">
+<path d="M-151.5 -100 H137.5 M-151.5 -106 V-94 M137.5 -106 V-94"></path>
+<path d="M-151.5 -90 V-22 M137.5 -90 V-18" stroke-dasharray="3 3"></path>
+</g>
+<text x="-7" y="-107" text-anchor="middle" font-family="Overpass Mono, ui-monospace, monospace" font-size="12" letter-spacing="1" fill="#56595A">ESCALA 650 MM</text>
+</g>
+<path d="M140 318 Q150 350 180 360 M180 360 l-10 -1.5 M180 360 l-6 -8" fill="none" stroke="#B5463A" stroke-width="1.6" stroke-linecap="round" filter="url(#lapiz)"></path>
+</svg>
+
+<div style="position:absolute;left:52px;top:44px;width:440px;display:flex;flex-direction:column;gap:12px">
+<p style="margin:0;font-family:var(--f-ficha);font-size:12px;letter-spacing:.12em;color:var(--grafito-2)">SEIS CANCIONES</p>
+<h1 style="margin:0;font-family:var(--f-display);font-weight:400;font-size:92px;line-height:.9;letter-spacing:-.01em">Cancionero</h1>
+<p style="margin:6px 0 0;font-style:italic;font-size:20px;line-height:1.3">Para cantar entre todos.</p>
+</div>
+
+<div style="position:absolute;left:404px;top:180px;width:108px;height:108px;border:2px solid var(--adriatico);border-radius:50%;box-shadow:inset 0 0 0 4px #FFFFFF,inset 0 0 0 5.5px var(--adriatico);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--adriatico);text-align:center;transform:rotate(-8deg)">
+<span class="editable" data-campo="lugar" data-vacio="[LUGAR]" style="display:inline-block;min-width:3em;max-width:88px;font-family:var(--f-ficha);font-size:10px;line-height:1.2;letter-spacing:.12em;text-transform:uppercase"></span>
+<span style="font-family:var(--f-display);font-size:30px;line-height:1">2026</span>
+<span style="font-family:var(--f-ficha);font-size:10px;letter-spacing:.12em">CANCIONERO</span>
+</div>
+
+<p style="position:absolute;left:64px;top:262px;width:200px;margin:0;font-family:var(--f-mano);font-size:26px;line-height:1;color:var(--senal);white-space:pre-line;transform:rotate(-3deg)">escala 1:8,5
+(más o menos)</p>
+
+<div style="position:absolute;left:290px;top:516px;width:232px;border:1.5px solid var(--grafito);background:#FFFFFF;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+<p style="margin:0;font-family:var(--f-display);font-size:22px;line-height:1">Guitarra criolla</p>
+<div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-family:var(--f-ficha);font-size:12px;line-height:1.35">
+<span style="color:var(--grafito-2);letter-spacing:.06em">CUERDAS</span><span>6, de nailon</span>
+<span style="color:var(--grafito-2);letter-spacing:.06em">ESCALA</span><span>650 mm</span>
+<span style="color:var(--grafito-2);letter-spacing:.06em">AFINACIÓN</span><span style="white-space:pre-line">Mi La Re
+Sol Si Mi</span>
+<span style="color:var(--grafito-2);letter-spacing:.06em">VOCES</span><span>todas</span>
+</div>
+</div>
+
+<div style="position:absolute;left:52px;top:660px;width:218px;display:flex;flex-direction:column;gap:6px">
+<p style="margin:0;font-family:var(--f-ficha);font-size:12px;letter-spacing:.08em;color:var(--grafito-2)">ESTE CANCIONERO ES DE</p>
+<div style="height:40px;border-bottom:1.5px solid var(--grafito)"></div>
+</div>
+</div>
+
+<!-- CANCIÓN 02 (pág. 3) -->
+<div class="pagina recto">
+<div class="lavados">
+<div class="lavado cielo f2" style="left:412px;top:400px;width:156px;height:250px;opacity:.42"></div>
+<div class="lavado ocre f3" style="left:402px;top:614px;width:172px;height:88px;opacity:.45"></div>
+</div>
+<svg class="margen" viewBox="0 0 80 540" aria-hidden="true">
+<g filter="url(#lapiz)" fill="none" stroke="#2A2C2E" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+<path d="M10 372 Q10 360 16 358 L30 358 Q36 360 36 372 L36 468 Q36 474 30 474 L16 474 Q10 474 10 468 Z"></path>
+<path d="M14 358 L14 342 Q14 338 18 338 L28 338 Q32 338 32 342 L32 358"></path>
+<path d="M20 338 L20 330 L28 326 L30 329 L24 333 L24 338"></path>
+<path d="M36 382 C47 382 47 412 36 412"></path>
+<path d="M10 388 H36 M10 458 H36" stroke="#56595A" stroke-width="1"></path>
+<path d="M50 443 Q42 447 42 460 Q42 474 52 474 L66 474 Q76 474 76 460 Q76 447 68 443"></path>
+<ellipse cx="59" cy="443" rx="9" ry="2.6"></ellipse>
+<path d="M52 443 Q58 437 65 442" stroke="#56595A" stroke-width="1"></path>
+<path d="M61 441 L71 412 L75 409 M67.2 422.5 L71 424" stroke-width="1.6"></path>
+<path d="M0 477 Q20 475 40 477 T80 477" stroke="#56595A" stroke-width="1"></path>
+</g>
+</svg>
+<p class="nota" style="top:424px">el primero
+es mío
+(el feo)</p>
+<div class="caja">
+<div class="ceja"><span>CANCIÓN 02</span><span>DE 06</span></div>
+<h2 class="titulo">Yo tengo un amigo que me ama</h2>
+<div class="regla"></div>
+<div class="letras" data-id="c02" style="--tam:16px">
+<div class="letra" data-campo="c02" data-vacio="[Pegá acá la letra]">Yo tengo un amigo que me ama,
+me ama, me ama.
+Yo tengo un amigo que me ama:
+su nombre es Jesús.
+
+Que me ama, que me ama,
+que me ama sí, con tierno amor.
+Que me ama, que me ama:
+su nombre es Jesús.
+
+Tú tienes un amigo que te ama,
+te ama, te ama.
+Tú tienes un amigo que te ama:
+su nombre es Jesús.
+
+Tenemos un amigo que nos ama,
+nos ama, nos ama.
+Tenemos un amigo que nos ama:
+su nombre es Jesús.</div>
+</div>
+<div class="pie">
+<span>PARA LEER · Jn 15,15</span>
+<span class="tam"><button type="button" data-tam="c02" data-d="-1" aria-label="Achicar la letra de la canción 02">A−</button><button type="button" data-tam="c02" data-d="1" aria-label="Agrandar la letra de la canción 02">A+</button></span>
+<span>03</span>
+</div>
+</div>
+</div>
+
+<svg class="corte" viewBox="0 0 20 794" aria-hidden="true">
+<path d="M10 0 V18 M10 776 V794" stroke="#2A2C2E" stroke-width="1"></path>
+<path d="M10 26 V768" stroke="#56595A" stroke-width="1" stroke-dasharray="7 5"></path>
+</svg>
+</article>
+</section>
+
+<!-- ================= HOJA 1 · DORSO ================= -->
+<section class="pliego">
+<p class="rotulo-hoja">Hoja 1 · dorso — canciones 03 y 01</p>
+<article class="hoja" aria-label="Hoja 1, dorso">
+
+<!-- CANCIÓN 03 (pág. 4) -->
+<div class="pagina verso">
+<div class="lavados">
+<div class="lavado cielo f1" style="left:14px;top:176px;width:132px;height:480px;opacity:.48"></div>
+<div class="lavado ocre f3" style="left:18px;top:598px;width:124px;height:124px;opacity:.3"></div>
+</div>
+<svg class="margen" viewBox="0 0 80 540" aria-hidden="true">
+<g filter="url(#lapiz)" fill="none" stroke="#56595A" stroke-width="1.1" stroke-linecap="round">
+<path d="M66 24 V430 M58 24 H74 M58 430 H74"></path>
+<path d="M76 24 H88 M76 430 H88" stroke-dasharray="3 3"></path>
+</g>
+<text x="52" y="227" transform="rotate(-90 52 227)" text-anchor="middle" font-family="Overpass Mono, ui-monospace, monospace" font-size="12" letter-spacing="1.2" fill="#56595A">ALTO · ∞ M</text>
+</svg>
+<p class="nota" style="top:632px">el ancho
+no entró
+en la hoja</p>
+<div class="caja">
+<div class="ceja"><span>CANCIÓN 03</span><span>DE 06</span></div>
+<h2 class="titulo">El amor de Dios es maravilloso</h2>
+<div class="regla"></div>
+<div class="letras" data-id="c03" style="--tam:21px">
+<div class="letra" data-campo="c03" data-vacio="[Pegá acá la letra]">El amor de Dios es maravilloso,
+el amor de Dios es maravilloso,
+el amor de Dios es maravilloso:
+¡cuán grande es el amor de Dios!
+
+Tan alto que no puedo ir arriba de Él,
+tan bajo que no puedo ir debajo de Él,
+tan ancho que no puedo salir fuera de Él:
+¡cuán grande es el amor de Dios!</div>
+</div>
+<div class="pie">
+<span>04</span>
+<span class="tam"><button type="button" data-tam="c03" data-d="-1" aria-label="Achicar la letra de la canción 03">A−</button><button type="button" data-tam="c03" data-d="1" aria-label="Agrandar la letra de la canción 03">A+</button></span>
+<span>PARA LEER · Ef 3,18</span>
+</div>
+</div>
+</div>
+
+<!-- CANCIÓN 01 (pág. 2) -->
+<div class="pagina verso">
+<div class="lavados">
+<div class="lavado cielo f1" style="left:6px;top:200px;width:156px;height:150px;opacity:.45"></div>
+<div class="lavado ocre f2" style="left:16px;top:300px;width:130px;height:330px;opacity:.34"></div>
+</div>
+<svg class="margen" viewBox="0 0 80 540" aria-hidden="true">
+<g filter="url(#lapiz)" fill="none" stroke="#2A2C2E" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M2 92 Q14 62 30 76 Q44 56 62 72 Q70 66 78 74"></path>
+<path d="M0 100 Q24 90 44 96 Q62 90 80 98" stroke="#56595A" stroke-width="1"></path>
+<path d="M44.5 96 C43.2 104.3 37.4 128.7 37 146 C36.6 163.3 43.2 181.3 42 200 C40.8 218.7 30.6 238.3 29.5 258 C28.4 277.7 36.8 297.7 35.5 318 C34.2 338.3 23.9 361.3 21.5 380 C19.1 398.7 21.1 421.7 21 430"></path>
+<path d="M47.5 96 C46.8 104.3 42.2 128.7 43 146 C43.8 163.3 51.8 181.3 52 200 C52.2 218.7 43.8 238.3 44.5 258 C45.2 277.7 55.5 297.7 56.5 318 C57.5 338.3 50.1 361.3 50.5 380 C50.9 398.7 57.6 421.7 59 430"></path>
+</g>
+<g filter="url(#lapiz)" fill="#56595A" stroke="none">
+<ellipse cx="41.6" cy="173" rx="1.1" ry="2"></ellipse>
+<ellipse cx="45.4" cy="168.6" rx="1.1" ry="2"></ellipse>
+<ellipse cx="39.6" cy="229" rx="1.4" ry="2.5"></ellipse>
+<ellipse cx="44.4" cy="223.5" rx="1.4" ry="2.5"></ellipse>
+<ellipse cx="38.7" cy="288" rx="1.6" ry="3.1"></ellipse>
+<ellipse cx="44.3" cy="281.5" rx="1.6" ry="3.1"></ellipse>
+<ellipse cx="37.7" cy="349" rx="1.9" ry="3.6"></ellipse>
+<ellipse cx="44.3" cy="341.4" rx="1.9" ry="3.6"></ellipse>
+<ellipse cx="34.2" cy="405" rx="2.2" ry="4.1"></ellipse>
+<ellipse cx="41.8" cy="396.3" rx="2.2" ry="4.1"></ellipse>
+</g>
+</svg>
+<p class="nota" style="top:626px">a lo de
+Isabel,
+más o
+menos</p>
+<div class="caja">
+<div class="ceja"><span>CANCIÓN 01</span><span>DE 06</span></div>
+<h2 class="titulo">María está pasando por aquí</h2>
+<div class="regla"></div>
+<div class="letras" data-id="c01" style="--tam:18px">
+<div class="letra" data-campo="c01" data-vacio="[Pegá acá la letra]">María está pasando por aquí,
+María está pasando por aquí,
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.
+
+Su amor está pasando por aquí,
+Su amor está pasando por aquí,
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.
+
+Su luz está pasando por aquí,
+Su luz está pasando por aquí,
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.</div>
+</div>
+<div class="pie">
+<span>02</span>
+<span class="tam"><button type="button" data-tam="c01" data-d="-1" aria-label="Achicar la letra de la canción 01">A−</button><button type="button" data-tam="c01" data-d="1" aria-label="Agrandar la letra de la canción 01">A+</button></span>
+<span>PARA LEER · Lc 1,39-45</span>
+</div>
+</div>
+</div>
+
+<svg class="corte" viewBox="0 0 20 794" aria-hidden="true">
+<path d="M10 0 V18 M10 776 V794" stroke="#2A2C2E" stroke-width="1"></path>
+<path d="M10 26 V768" stroke="#56595A" stroke-width="1" stroke-dasharray="7 5"></path>
+</svg>
+</article>
+</section>
+
+<!-- ================= HOJA 2 · FRENTE ================= -->
+<section class="pliego">
+<p class="rotulo-hoja">Hoja 2 · frente — canciones 04 y 06</p>
+<article class="hoja" aria-label="Hoja 2, frente">
+
+<!-- CANCIÓN 04 (pág. 5) -->
+<div class="pagina recto">
+<div class="lavados">
+<div class="lavado cielo f1" style="left:430px;top:150px;width:140px;height:150px;opacity:.35"></div>
+<div class="lavado oliva f2" style="left:418px;top:190px;width:150px;height:400px;opacity:.3"></div>
+</div>
+<svg class="margen" viewBox="0 0 80 540" aria-hidden="true">
+<g filter="url(#lapiz)" fill="none" stroke-linecap="round">
+<path d="M50 6 Q60 220 22 404" stroke="#2A2C2E" stroke-width="1.5"></path>
+<path d="M51.2 35.8 Q59.3 40.9 61.5 53.2 M51.2 35.8 Q43.4 41.4 41.7 53.8 M51.8 61.7 Q61 68.5 64.1 82.3 M51.8 61.7 Q42.9 68.8 40.1 82.8 M52.1 87.4 Q62.1 95.7 66 111 M52.1 87.4 Q42.2 95.8 38.3 111.1 M52 112.9 Q62.6 122.5 67.2 138.9 M52 112.9 Q41.1 122.2 36.3 138.6 M51.5 138.1 Q62.5 148.7 67.5 166.2 M51.5 138.1 Q39.9 148.2 34.3 165.3 M50.7 163.2 Q61.9 174.5 67 192.6 M50.7 163.2 Q38.5 173.6 32.3 191.2 M49.5 187.9 Q60.7 199.7 65.8 218.1 M49.5 187.9 Q37 198.4 30.4 216.2 M48 212.5 Q58.9 224.4 63.7 242.8 M48 212.5 Q35.3 222.7 28.6 240.3 M46.1 236.8 Q56.5 248.5 61 266.6 M46.1 236.8 Q33.5 246.5 26.9 263.6 M43.8 260.9 Q53.7 272 57.5 289.5 M43.8 260.9 Q31.6 269.8 25.3 286.2 M41.2 284.8 Q50.3 295.1 53.5 311.6 M41.2 284.8 Q29.5 292.6 23.8 308.1 M38.2 308.5 Q46.5 317.6 48.9 333 M38.2 308.5 Q27.3 315 22.3 329.4 M34.9 331.9 Q42.3 339.8 43.8 353.7 M34.9 331.9 Q24.9 337.1 20.8 350.2 M31.2 355.1 Q37.7 361.5 38.4 374 M31.2 355.1 Q22.2 358.9 19.2 370.7 M27.1 378.1 Q32.8 383 32.6 393.8 M27.1 378.1 Q19.3 380.5 17.4 390.9" stroke="#2A2C2E" stroke-width="1.1"></path>
+</g>
+</svg>
+<p class="nota" style="top:596px">le sobran
+hojas,
+perdón</p>
+<div class="caja">
+<div class="ceja"><span>CANCIÓN 04</span><span>DE 06</span></div>
+<h2 class="titulo">Hosanna</h2>
+<div class="regla"></div>
+<div class="letras" data-id="c04" style="--tam:22px">
+<div class="letra" data-campo="c04" data-vacio="[Pegá acá la letra]">¡Hosanna al Hijo de David!
+¡Bendito el que viene
+en el nombre del Señor!
+¡Hosanna en las alturas!
+
+¡Hosanna al Hijo de David!
+¡Bendito el que viene
+en el nombre del Señor!
+¡Hosanna en las alturas!</div>
+</div>
+<div class="pie">
+<span>PARA LEER · Mt 21,8-9</span>
+<span class="tam"><button type="button" data-tam="c04" data-d="-1" aria-label="Achicar la letra de la canción 04">A−</button><button type="button" data-tam="c04" data-d="1" aria-label="Agrandar la letra de la canción 04">A+</button></span>
+<span>05</span>
+</div>
+</div>
+</div>
+
+<!-- CANCIÓN 06 (pág. 7) -->
+<div class="pagina recto">
+<div class="lavados">
+<div class="lavado cielo f1" style="left:428px;top:168px;width:142px;height:170px;opacity:.35"></div>
+<div class="lavado ocre f3" style="left:404px;top:606px;width:170px;height:100px;opacity:.45"></div>
+</div>
+<svg class="margen" viewBox="0 0 80 540" aria-hidden="true">
+<g filter="url(#lapiz)" fill="#B0884A" stroke="#2A2C2E" stroke-width="1">
+<ellipse cx="18.7" cy="149.5" rx="2.7" ry="4.1" transform="rotate(50.9 18.7 149.5)"></ellipse>
+<ellipse cx="39.6" cy="171.7" rx="2.7" ry="4.1" transform="rotate(10.5 39.6 171.7)"></ellipse>
+<ellipse cx="61.1" cy="190.8" rx="2.7" ry="4.1" transform="rotate(15.6 61.1 190.8)"></ellipse>
+<ellipse cx="17.6" cy="218.9" rx="2.7" ry="4.1" transform="rotate(-23.6 17.6 218.9)"></ellipse>
+<ellipse cx="47.7" cy="233.9" rx="2.7" ry="4.1" transform="rotate(23.2 47.7 233.9)"></ellipse>
+<ellipse cx="71.3" cy="255.4" rx="2.7" ry="4.1" transform="rotate(55.8 71.3 255.4)"></ellipse>
+<ellipse cx="28.4" cy="283.5" rx="2.7" ry="4.1" transform="rotate(-41.1 28.4 283.5)"></ellipse>
+<ellipse cx="48.8" cy="299.2" rx="2.7" ry="4.1" transform="rotate(-52.9 48.8 299.2)"></ellipse>
+<ellipse cx="66.9" cy="322.9" rx="2.7" ry="4.1" transform="rotate(-56.4 66.9 322.9)"></ellipse>
+<ellipse cx="30.8" cy="347.6" rx="2.7" ry="4.1" transform="rotate(41.1 30.8 347.6)"></ellipse>
+<ellipse cx="54.7" cy="370.2" rx="2.7" ry="4.1"></ellipse>
+</g>
+<g filter="url(#lapiz)" fill="none" stroke="#2A2C2E" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M16 452 Q13 432 18 414 M18 414 Q10 406 6 410 Q10 416 18 414 M18 414 Q25 404 31 407 Q27 415 18 414"></path>
+<path d="M42 452 Q39 424 44 398 M44 398 Q35 389 31 393 Q35 400 44 398 M44 398 Q52 387 58 391 Q53 399 44 398"></path>
+<path d="M66 452 Q63 436 67 422 M67 422 Q60 415 56 418 Q60 424 67 422 M67 422 Q73 413 78 416 Q75 423 67 422"></path>
+<path d="M0 452 Q20 448 40 452 T80 451" stroke="#56595A" stroke-width="1"></path>
+<path d="M8 460 h6 M30 462 h5 M52 459 h7 M70 463 h5" stroke="#56595A" stroke-width="1"></path>
+</g>
+</svg>
+<p class="nota" style="top:186px">sembrar
+lleva
+tiempo;
+dibujarlo
+también</p>
+<div class="caja">
+<div class="ceja"><span>CANCIÓN 06</span><span>DE 06</span></div>
+<h2 class="titulo">Vienen con alegría, Señor</h2>
+<div class="regla"></div>
+<div class="letras" data-id="c06" style="--tam:17px">
+<div class="letra estribillo" data-campo="c06-estribillo" data-vacio="[Estribillo]">Vienen con alegría, Señor,
+cantando vienen con alegría, Señor,
+los que caminan por la vida, Señor,
+sembrando tu paz y amor.</div>
+<div class="letra" data-campo="c06-estrofas" data-vacio="[Estrofas]">Vienen trayendo la esperanza
+a un mundo cargado de ansiedad,
+a un mundo que busca y que no alcanza
+caminos de amor y de amistad.
+
+Vienen trayendo entre sus manos
+esfuerzos de hermanos por la paz,
+deseos de un mundo más humano
+que nace en el bien y la verdad.</div>
+</div>
+<div class="pie">
+<span>PARA LEER · Sal 126,5-6</span>
+<span class="tam"><button type="button" data-tam="c06" data-d="-1" aria-label="Achicar la letra de la canción 06">A−</button><button type="button" data-tam="c06" data-d="1" aria-label="Agrandar la letra de la canción 06">A+</button></span>
+<span>07</span>
+</div>
+</div>
+</div>
+
+<svg class="corte" viewBox="0 0 20 794" aria-hidden="true">
+<path d="M10 0 V18 M10 776 V794" stroke="#2A2C2E" stroke-width="1"></path>
+<path d="M10 26 V768" stroke="#56595A" stroke-width="1" stroke-dasharray="7 5"></path>
+</svg>
+</article>
+</section>
+
+<!-- ================= HOJA 2 · DORSO ================= -->
+<section class="pliego">
+<p class="rotulo-hoja">Hoja 2 · dorso — contratapa y canción 05</p>
+<article class="hoja" aria-label="Hoja 2, dorso">
+
+<!-- CONTRATAPA (pág. 8) -->
+<div class="pagina verso">
+<div class="lavados">
+<div class="lavado cielo f1" style="left:-20px;top:18px;width:300px;height:190px;opacity:.4"></div>
+<div class="lavado ocre f3" style="left:6px;top:560px;width:200px;height:170px;opacity:.32"></div>
+</div>
+<p class="nota" style="top:626px">¿la dijo?
+todavía
+se discute</p>
+<svg style="position:absolute;left:80px;top:694px;width:56px;height:56px;overflow:visible" viewBox="0 0 56 56" aria-hidden="true">
+<path d="M10 4 Q16 34 46 44 M46 44 l-9 -1.5 M46 44 l-5 -8" fill="none" stroke="#B5463A" stroke-width="1.6" stroke-linecap="round" filter="url(#lapiz)"></path>
+</svg>
+<div class="caja">
+<div class="ceja"><span>EN ESTE CANCIONERO</span><span>2026</span></div>
+<h2 class="titulo">Índice</h2>
+<div class="regla"></div>
+<ol style="margin:26px 0 0;padding:0;list-style:none;border-bottom:1px solid var(--filete)">
+<li style="display:flex;align-items:baseline;gap:14px;padding:11px 0;border-top:1px solid var(--filete)"><span style="width:26px;flex-shrink:0;font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">01</span><span style="flex-grow:1;font-size:18px;line-height:1.3">María está pasando por aquí</span><span style="font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">2</span></li>
+<li style="display:flex;align-items:baseline;gap:14px;padding:11px 0;border-top:1px solid var(--filete)"><span style="width:26px;flex-shrink:0;font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">02</span><span style="flex-grow:1;font-size:18px;line-height:1.3">Yo tengo un amigo que me ama</span><span style="font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">3</span></li>
+<li style="display:flex;align-items:baseline;gap:14px;padding:11px 0;border-top:1px solid var(--filete)"><span style="width:26px;flex-shrink:0;font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">03</span><span style="flex-grow:1;font-size:18px;line-height:1.3">El amor de Dios es maravilloso</span><span style="font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">4</span></li>
+<li style="display:flex;align-items:baseline;gap:14px;padding:11px 0;border-top:1px solid var(--filete)"><span style="width:26px;flex-shrink:0;font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">04</span><span style="flex-grow:1;font-size:18px;line-height:1.3">Hosanna</span><span style="font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">5</span></li>
+<li style="display:flex;align-items:baseline;gap:14px;padding:11px 0;border-top:1px solid var(--filete)"><span style="width:26px;flex-shrink:0;font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">05</span><span style="flex-grow:1;font-size:18px;line-height:1.3">Yo tengo una madre que me ama</span><span style="font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">6</span></li>
+<li style="display:flex;align-items:baseline;gap:14px;padding:11px 0;border-top:1px solid var(--filete)"><span style="width:26px;flex-shrink:0;font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">06</span><span style="flex-grow:1;font-size:18px;line-height:1.3">Vienen con alegría, Señor</span><span style="font-family:var(--f-ficha);font-size:12px;color:var(--grafito-2)">7</span></li>
+</ol>
+<div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+<p style="margin:0;font-style:italic;font-size:26px;line-height:1.25">Quien canta, reza dos veces.</p>
+<p style="margin:0;font-family:var(--f-ficha);font-size:12px;letter-spacing:.08em;color:var(--grafito-2)">ATRIBUIDA A SAN AGUSTÍN</p>
+</div>
+</div>
+</div>
+
+<!-- CANCIÓN 05 (pág. 6) -->
+<div class="pagina verso">
+<div class="lavados">
+<div class="lavado cielo f2" style="left:8px;top:172px;width:150px;height:390px;opacity:.48"></div>
+</div>
+<svg class="margen" viewBox="0 0 80 540" aria-hidden="true">
+<g filter="url(#lapiz)" fill="none" stroke="#2A2C2E" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="40" cy="24" r="7"></circle>
+<path d="M40 31 C40 35.5 39.5 49 40 58 C40.5 67 42.1 76 43.1 85 C44.1 94 45 103 45.9 112 C46.7 121 47.5 130 48.1 139 C48.7 148 49.2 157 49.5 166 C49.8 175 50 184 50 193 C50 202 49.8 211 49.5 220 C49.2 229 48.7 238 48.1 247 C47.5 256 46.7 265 45.9 274 C45 283 44.1 292.5 43.1 301 C42.1 309.5 40.5 321 40 325" stroke="#56595A" stroke-width="1"></path>
+<circle cx="40" cy="58" r="5.4"></circle>
+<circle cx="43.1" cy="85" r="5.4"></circle>
+<circle cx="45.9" cy="112" r="5.4"></circle>
+<circle cx="48.1" cy="139" r="5.4"></circle>
+<circle cx="49.5" cy="166" r="5.4"></circle>
+<circle cx="50" cy="193" r="5.4"></circle>
+<circle cx="49.5" cy="220" r="5.4"></circle>
+<circle cx="48.1" cy="247" r="5.4"></circle>
+<circle cx="45.9" cy="274" r="5.4"></circle>
+<circle cx="43.1" cy="301" r="5.4"></circle>
+<path d="M40 325 V361 M31 336 H49" stroke-width="1.8"></path>
+</g>
+</svg>
+<p class="nota" style="top:590px">diez
+cuentas:
+las conté
+dos veces</p>
+<div class="caja">
+<div class="ceja"><span>CANCIÓN 05</span><span>DE 06</span></div>
+<h2 class="titulo">Yo tengo una madre que me ama</h2>
+<div class="regla"></div>
+<div class="letras" data-id="c05" style="--tam:16px">
+<div class="letra" data-campo="c05" data-vacio="[Pegá acá la letra]">Yo tengo una madre que me ama,
+me ama, me ama.
+Yo tengo una madre que me ama:
+la Madre de Jesús.
+
+Que me ama, que me ama,
+que me ama sí, con tierno amor.
+Que me ama, que me ama:
+la Madre de Jesús.
+
+Tú tienes una madre que te ama,
+te ama, te ama.
+Tú tienes una madre que te ama:
+la Madre de Jesús.
+
+Tenemos una madre que nos ama,
+nos ama, nos ama.
+Tenemos una madre que nos ama:
+la Madre de Jesús.</div>
+</div>
+<div class="pie">
+<span>06</span>
+<span class="tam"><button type="button" data-tam="c05" data-d="-1" aria-label="Achicar la letra de la canción 05">A−</button><button type="button" data-tam="c05" data-d="1" aria-label="Agrandar la letra de la canción 05">A+</button></span>
+<span>PARA LEER · Jn 19,26-27</span>
+</div>
+</div>
+</div>
+
+<svg class="corte" viewBox="0 0 20 794" aria-hidden="true">
+<path d="M10 0 V18 M10 776 V794" stroke="#2A2C2E" stroke-width="1"></path>
+<path d="M10 26 V768" stroke="#56595A" stroke-width="1" stroke-dasharray="7 5"></path>
+</svg>
+</article>
+</section>
+
+</main>
+
+<script>
+(function(){
+  var CLAVE = 'cancionero-hangar-v1';
+  var datos = {};
+  try { datos = JSON.parse(localStorage.getItem(CLAVE) || '{}') || {}; } catch (e) { datos = {}; }
+  function guardar(){ try { localStorage.setItem(CLAVE, JSON.stringify(datos)); } catch (e) {} }
+  datos.textos = datos.textos || {};
+  datos.tam = datos.tam || {};
+
+  // Letras por defecto del cancionero (no pisan si el usuario ya editó)
+  var defaults = {"c02": "Yo tengo un amigo que me ama,\nme ama, me ama.\nYo tengo un amigo que me ama:\nsu nombre es Jesús.\n\nQue me ama, que me ama,\nque me ama sí, con tierno amor.\nQue me ama, que me ama:\nsu nombre es Jesús.\n\nTú tienes un amigo que te ama,\nte ama, te ama.\nTú tienes un amigo que te ama:\nsu nombre es Jesús.\n\nTenemos un amigo que nos ama,\nnos ama, nos ama.\nTenemos un amigo que nos ama:\nsu nombre es Jesús.", "c03": "El amor de Dios es maravilloso,\nel amor de Dios es maravilloso,\nel amor de Dios es maravilloso:\n¡cuán grande es el amor de Dios!\n\nTan alto que no puedo ir arriba de Él,\ntan bajo que no puedo ir debajo de Él,\ntan ancho que no puedo salir fuera de Él:\n¡cuán grande es el amor de Dios!", "c01": "María está pasando por aquí,
+María está pasando por aquí,
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.
+
+Su amor está pasando por aquí,
+Su amor está pasando por aquí,
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.
+
+Su luz está pasando por aquí,
+Su luz está pasando por aquí,
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.
+y cuando pasa todo se transforma:
+la alegría viene, la tristeza va.", "c04": "¡Hosanna al Hijo de David!\n¡Bendito el que viene\nen el nombre del Señor!\n¡Hosanna en las alturas!\n\n¡Hosanna al Hijo de David!\n¡Bendito el que viene\nen el nombre del Señor!\n¡Hosanna en las alturas!", "c05": "Yo tengo una madre que me ama,\nme ama, me ama.\nYo tengo una madre que me ama:\nla Madre de Jesús.\n\nQue me ama, que me ama,\nque me ama sí, con tierno amor.\nQue me ama, que me ama:\nla Madre de Jesús.\n\nTú tienes una madre que te ama,\nte ama, te ama.\nTú tienes una madre que te ama:\nla Madre de Jesús.\n\nTenemos una madre que nos ama,\nnos ama, nos ama.\nTenemos una madre que nos ama:\nla Madre de Jesús.", "c06-estribillo": "Vienen con alegría, Señor,
+cantando vienen con alegría, Señor,
+los que caminan por la vida, Señor,
+sembrando tu paz y amor.", "c06-estrofas": "Vienen trayendo la esperanza
+a un mundo cargado de ansiedad,
+a un mundo que busca y que no alcanza
+caminos de amor y de amistad.
+
+Vienen trayendo entre sus manos
+esfuerzos de hermanos por la paz,
+deseos de un mundo más humano
+que nace en el bien y la verdad."};
+  Object.keys(defaults).forEach(function(k){
+    if (!datos.textos[k]) { datos.textos[k] = defaults[k]; }
+  });
+
+
+  // Cuadros editables: letras y lugar del sello
+  var campos = document.querySelectorAll('[data-campo]');
+  Array.prototype.forEach.call(campos, function(el){
+    var id = el.getAttribute('data-campo');
+    try { el.contentEditable = 'plaintext-only'; } catch (e) {}
+    if (el.contentEditable !== 'plaintext-only') { el.contentEditable = 'true'; }
+    el.spellcheck = false;
+    if (datos.textos[id]) { el.textContent = datos.textos[id]; }
+    el.addEventListener('paste', function(ev){
+      if (el.contentEditable === 'plaintext-only') { return; }
+      ev.preventDefault();
+      var t = (ev.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, t);
+    });
+    el.addEventListener('input', function(){
+      var t = el.innerText.replace(/\n+$/, '');
+      if (!t.trim()) { el.textContent = ''; t = ''; }
+      datos.textos[id] = t;
+      guardar();
+    });
+  });
+
+  // Tamaño de letra por canción
+  Array.prototype.forEach.call(document.querySelectorAll('.letras'), function(caja){
+    var id = caja.getAttribute('data-id');
+    if (datos.tam[id]) { caja.style.setProperty('--tam', datos.tam[id] + 'px'); }
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-tam]'), function(b){
+    b.addEventListener('click', function(){
+      var id = b.getAttribute('data-tam');
+      var caja = document.querySelector('.letras[data-id="' + id + '"]');
+      var actual = parseFloat(getComputedStyle(caja).getPropertyValue('--tam')) || 19;
+      var nuevo = Math.max(14, Math.min(28, actual + parseFloat(b.getAttribute('data-d'))));
+      caja.style.setProperty('--tam', nuevo + 'px');
+      datos.tam[id] = nuevo;
+      guardar();
+    });
+  });
+
+  // Acuarelas encendidas o apagadas
+  var chk = document.getElementById('acuarelas');
+  if (datos.acuarelas === false) { chk.checked = false; document.body.classList.add('sin-acuarelas'); }
+  chk.addEventListener('change', function(){
+    document.body.classList.toggle('sin-acuarelas', !chk.checked);
+    datos.acuarelas = chk.checked;
+    guardar();
+  });
+
+  document.getElementById('imprimir').addEventListener('click', function(){ window.print(); });
+
+  // En pantallas chicas, las hojas se achican para entrar enteras
+  function ajustar(){
+    var z = Math.min(1, (document.documentElement.clientWidth - 32) / 1123);
+    document.documentElement.style.setProperty('--zoom', z.toFixed(4));
+  }
+  ajustar();
+  window.addEventListener('resize', ajustar);
+})();
+</script>
+</body>
+</html>
